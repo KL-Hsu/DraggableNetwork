@@ -1,11 +1,26 @@
 import numpy as np
+import matplotlib
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
 import networkx as nx 
+import threading
+import time 
+from tkinter import filedialog
 '''
-Date: 2021/07/28
 Author: Kuan-Lun Hsu 
 Purpose: Create an interactive interface for drawing a network
+_________________________________________________________________________
+version 1.1, Date: 2021/12/10
+Features:
+1. Click a button to save the current node positions 
+2. Pop up a filedialog for selecting a folder and naming the file
+3. During saving process, the button shows 'saving...'. After finished, it shows 'save pos'
 
+Reference1:https://matplotlib.org/stable/api/widgets_api.html#matplotlib.widgets.Button
+Reference2:https://stackoverflow.com/questions/18602034/python-parallel-threads
+_________________________________________________________________________
+version 1.0, Date: 2021/07/27
 Features:
 1. Select a node and drag it to adjust its position
 2. Drag the figure to explore the network
@@ -31,12 +46,21 @@ class DraggableNetwork():
         self.move_from = 0
         self._ind = None
         self.ax = nodes.axes
+        #Add mark
+        self.mark = plt.axes([0.8, 0.98, 0.12, 0.05])
+        self.mark.axis('off')
+        self.mark.annotate('DraggableNetwork v1.1', (0, 0))
+        #Add button
+        self.axbtn = plt.axes([0.2, 0.025, 0.12, 0.05])
+        self.btn = Button(ax=self.axbtn, label='Save positions', color='powderblue', hovercolor='tomato')
+        self.canvas = self.ax.figure.canvas
         self.canvas = self.ax.figure.canvas
         #Connect the canvas to the mouse event and run the corresponding function if happend
         self.canvas.mpl_connect('button_press_event', self.button_press_callback)
         self.canvas.mpl_connect('button_release_event', self.button_release_callback)
         self.canvas.mpl_connect('motion_notify_event', self.motion_notify_callback)
         self.zoom_factory(self.ax, 0.9)
+        self.button_factory(self.btn)
         plt.show()
 
 
@@ -113,7 +137,6 @@ class DraggableNetwork():
                 if position == target_pos:
                     label.set_position((x, y))
 
-
             self.nodes.set_offsets(xy)
             self.canvas.draw_idle()
 
@@ -150,6 +173,28 @@ class DraggableNetwork():
         #return the function
         return zoom_fun
 
+    def button_factory(self, btn):
+        def saving_thread():
+            time.sleep(0.001) #timedelay for the button to show 'Saving' 
+            file = filedialog.asksaveasfile(mode='w', defaultextension=".txt")
+            if file!=None:
+                string = '' 
+                for i in self.labels.values():
+                    key = i.get_text()
+                    x, y = i.get_position()
+                    string += key+':'+str(x)+','+str(y)+'\n'
+                file.write(string)
+                file.close()
+            self.btn.label.set_text('Save positions')
+            plt.draw()
+
+        def save_pos_button(event): 
+            t1 = threading.Thread(name='save pos',target=saving_thread) 
+            t1.start() 
+            self.btn.label.set_text('Saving...')
+            plt.draw()
+        
+        btn.on_clicked(save_pos_button)
 
 
 if __name__ == '__main__':
