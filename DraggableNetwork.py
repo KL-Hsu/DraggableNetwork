@@ -11,6 +11,13 @@ from tkinter import filedialog
 Author: Kuan-Lun Hsu 
 Purpose: Create an interactive interface for drawing a network
 _________________________________________________________________________
+version 1.3, Date: 2022/01/21
+Features:
+1. import external images to represent nodes (also draggable)
+2. when loading previously saved node position, update the image position as well
+
+Reference:https://moonbooks.org/Articles/How-to-insert-an-image-a-picture-or-a-photo-in-a-matplotlib-figure/
+_______________________________________________________________
 version 1.2, Date: 2021/12/12
 Features:
 1. A new button to load previosuly saved node positions 
@@ -44,7 +51,8 @@ class DraggableNetwork():
 
     epsilon = 30 #range size for selecting node
 
-    def __init__(self, G, nodes, edges, labels, nodes0=None, node_size=None, weights=None, node_size_radius=None):
+    def __init__(self, G, nodes, edges, labels, nodes0=None, node_size=None, 
+                weights=None, node_size_radius=None, artist_ls=None, initial_key_ls=None):
         
         self.G = G
         self.nodes = nodes
@@ -57,6 +65,9 @@ class DraggableNetwork():
         self.move_from = 0
         self._ind = None
         self.ax = nodes.axes
+        #Add external img
+        self.artist_ls = artist_ls
+        self.initial_key_ls = initial_key_ls
         #Add mark
         self.mark = plt.axes([0.8, 0.98, 0.12, 0.05])
         self.mark.axis('off')
@@ -158,6 +169,12 @@ class DraggableNetwork():
             if self.nodes0 != None:
                 self.nodes0.set_offsets(xy)
 
+            #Update external images
+            if self.artist_ls != None:
+                for artist in self.artist_ls:
+                    if artist.xybox == target_pos:
+                        artist.xybox = (x, y)
+
             self.canvas.draw_idle()
 
     def zoom_factory(self, ax, base_scale):
@@ -225,6 +242,11 @@ class DraggableNetwork():
                 if self.nodes0 != None:
                     self.nodes0 = nx.draw_networkx_nodes(self.G, pos=initial_position, ax=self.ax, node_size=self.node_size, node_color='w', node_shape='o', alpha=1)
                 self.nodes = nx.draw_networkx_nodes(self.G, pos=initial_position, ax=self.ax, node_size=self.node_size, node_color='b', node_shape='o', alpha=0.3)
+                #Update img
+                if self.artist_ls != None:
+                    for i in range(len(self.artist_ls)):
+                        self.artist_ls[i].xybox = initial_position[self.initial_key_ls[i]]
+                        self.ax.add_artist(self.artist_ls[i])
 
             self.btn2.label.set_text('Load positions')
             plt.draw()
